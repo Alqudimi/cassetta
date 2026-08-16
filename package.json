@@ -1,6 +1,6 @@
 {
   "name": "cassetta",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -9,6 +9,8 @@
     "start": "NODE_ENV=production node dist/index.js",
     "preview": "vite preview --host",
     "check": "tsc --noEmit",
+    "test:core": "vitest run --root packages/core src/index.test.ts --coverage",
+    "test:transport": "vitest run --root packages/transport src/stdio.test.ts",
     "format": "prettier --write ."
   },
   "dependencies": {

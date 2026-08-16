@@ -1,12 +1,14 @@
 // Signal Archive design: CLI output is operational, concise, and safe to pipe into CI logs.
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { cassetteFromJsonl, cassetteToJsonl, diffEntries, prepareEntry, type Cassette } from "../../core/src/index.js";
+import { cassetteFromJsonl, cassetteToJsonl, diffEntries, prepareEntry, type Cassette, type ProtocolMessage } from "../../core/src/index.js";
+import { captureStdioSession } from "../../transport/src/stdio.js";
 
 const usage = `Cassetta — deterministic MCP workflow artifacts
 
 Usage:
   cassetta record <input.jsonl> <output.cassette.jsonl>
+  cassetta capture-stdio <requests.json> <output.cassette.jsonl> <command> [...args]
   cassetta replay <cassette.jsonl>
   cassetta diff <expected.jsonl> <actual.jsonl>
   cassetta check <cassette.jsonl>
@@ -30,6 +32,18 @@ const main = async (): Promise<void> => {
     const prepared: Cassette = { ...source, entries: source.entries.map((entry) => prepareEntry(entry)) };
     await writeFile(resolve(output), cassetteToJsonl(prepared), "utf8");
     console.log(`recorded ${prepared.entries.length} entries → ${output}`);
+    return;
+  }
+
+  if (command === "capture-stdio") {
+    const [requestsFile, output, executable, ...commandArgs] = args;
+    if (!requestsFile || !output || !executable) throw new Error("capture-stdio requires requests, output, and command paths");
+    const requests = JSON.parse(await readFile(resolve(requestsFile), "utf8")) as ProtocolMessage[];
+    if (!Array.isArray(requests)) throw new Error("requests.json must contain a JSON array");
+    const { cassette, stderr } = await captureStdioSession(requests, { command: executable, args: commandArgs, name: output });
+    await writeFile(resolve(output), cassetteToJsonl(cassette), "utf8");
+    if (stderr) console.error(stderr.trim());
+    console.log(`captured ${cassette.entries.length} entries → ${output}`);
     return;
   }
 

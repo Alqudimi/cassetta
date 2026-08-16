@@ -12,7 +12,7 @@ Cassetta is intentionally complementary to broad observability platforms and int
 
 ## Current status
 
-The repository contains the framework-free core, JSONL cassette format, redaction and normalization logic, a first CLI surface, real unit tests, and the product landing page. The transport adapter and package publishing workflow are next on the roadmap; the current CLI accepts cassette-shaped JSONL fixtures so the domain behavior can be exercised without external credentials.
+The repository contains the framework-free core, JSONL cassette format, redaction and normalization logic, a CLI surface, a local stdio transport adapter, real unit and E2E tests, and the product landing page. The current transport boundary speaks line-delimited JSON-RPC to a child process and turns request/response pairs into safe cassette entries without making network calls.
 
 ## Core workflow
 
@@ -28,9 +28,19 @@ live JSON-RPC session → capture → normalize → redact → cassette.jsonl
 ```bash
 pnpm install
 pnpm check
-pnpm vitest run packages/core/src/index.test.ts
+pnpm vitest run --root packages/core src/index.test.ts --coverage
+pnpm vitest run --root packages/transport src/stdio.test.ts
 pnpm build
 ```
+
+Capture a local line-delimited JSON-RPC process:
+
+```bash
+node --import tsx packages/cli/src/index.ts capture-stdio examples/requests.json fixtures/local.json node ./path/to/server.mjs
+node --import tsx packages/cli/src/index.ts check fixtures/local.json
+```
+
+The stdio adapter is deliberately conservative: one request is written per line, one JSON response is read per request, process lifetime is bounded by the session, and payloads pass through normalization and redaction before persistence.
 
 To use the domain core directly:
 
@@ -54,12 +64,12 @@ console.log(cassetteToJsonl({
 
 ## Architecture
 
-The domain core is independent from transports and presentation. It exposes typed messages, deterministic transforms, JSONL persistence, and diffs. A future stdio or Streamable HTTP adapter can feed the same `CassetteEntry` contract without changing the core.
+The domain core is independent from transports and presentation. It exposes typed messages, deterministic transforms, JSONL persistence, and diffs. The stdio adapter feeds the same `CassetteEntry` contract without changing the core; Streamable HTTP remains a planned adapter.
 
 | Layer | Responsibility |
 |---|---|
 | Domain core | Messages, normalization, redaction, cassette serialization, diffs |
-| Transport adapters | MCP stdio/HTTP capture and replay boundaries |
+| Transport adapters | MCP-like stdio capture boundary; HTTP remains planned |
 | CLI | Stable commands, human output, JSON output, exit codes |
 | CI integration | Run checks and fail on meaningful behavioral drift |
 | Product surface | Explain the workflow and help contributors understand the boundary |
@@ -76,7 +86,7 @@ The design and implementation plan lives in [`tasks/plan.md`](tasks/plan.md). Co
 
 ## Roadmap
 
-The next milestones are a transparent stdio proxy, Streamable HTTP support, signed cassette manifests, schema-aware contract assertions, a replay report, and a GitHub Action that uploads a compact diff artifact on failure. These extensions are designed around the existing ports rather than a rewrite.
+The next milestones are an MCP SDK-native stdio proxy, Streamable HTTP support, signed cassette manifests, schema-aware contract assertions, a replay report, and a GitHub Action that uploads a compact diff artifact on failure. These extensions are designed around the existing ports rather than a rewrite.
 
 ## License
 

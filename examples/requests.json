@@ -1,0 +1,7 @@
+[
+  {
+    "id": 1,
+    "method": "tools/list",
+    "params": { "authorization": "Bearer example-only" }
+  }
+]
