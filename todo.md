@@ -8,4 +8,4 @@
 - [x] Extend CLI with capture and replay transport commands.
 - [x] Update README, architecture notes, changelog, and CI.
 - [x] Run typecheck, unit tests, E2E tests, build, and audit.
-- [ ] Push main, publish v0.2.0, and verify GitHub Actions.
+- [x] Push main, publish v0.2.0, and verify GitHub Actions.
