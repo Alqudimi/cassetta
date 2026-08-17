@@ -6,4 +6,4 @@
 - [x] Add meaningful tests, failure paths, and security validation.
 - [x] Verify clean installation, typecheck, lint/format, tests, build, and audit.
 - [x] Improve documentation, contributor UX, and release metadata.
-- [ ] Push the validated change and verify GitHub Actions and release state.
+- [x] Push the validated change and verify GitHub Actions and release state.
