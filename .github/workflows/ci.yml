@@ -21,7 +21,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      - run: pnpm format:check
       - run: pnpm vitest run --root packages/core src/index.test.ts --coverage
-      - run: pnpm vitest run --root packages/transport src/stdio.test.ts
+      - run: pnpm test:transport
       - run: pnpm build
       - run: pnpm audit --audit-level high

@@ -2,6 +2,10 @@
 
 All notable changes to Cassetta are documented here.
 
+## [0.3.0] — 2026-08-17
+
+This release adds a strict offline replay runner that returns recorded responses without starting a provider, reports request drift with cassette sequence context, expands transport coverage to four tests, and adds a formatting guard to local scripts and CI. The existing stdio capture path remains unchanged and continues to redact before persistence.
+
 ## [0.2.0] — 2026-08-16
 
 This release adds a local line-delimited JSON-RPC stdio transport boundary. It captures ordered request/response pairs into the existing cassette core, applies normalization and secret redaction before persistence, exposes the `capture-stdio` CLI command, and verifies the path with a local fixture E2E test. Streamable HTTP, MCP SDK-native transport integration, and offline replay execution remain planned.

@@ -1,6 +1,6 @@
 {
   "name": "cassetta",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -10,8 +10,9 @@
     "preview": "vite preview --host",
     "check": "tsc --noEmit",
     "test:core": "vitest run --root packages/core src/index.test.ts --coverage",
-    "test:transport": "vitest run --root packages/transport src/stdio.test.ts",
-    "format": "prettier --write ."
+    "test:transport": "vitest run --root packages/transport",
+    "format": "prettier --write .",
+    "format:check": "prettier --check packages/**/*.ts examples/**/*.mjs README.md CONTRIBUTING.md SECURITY.md CHANGELOG.md .github/**/*.yml package.json packages/transport/README.md"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

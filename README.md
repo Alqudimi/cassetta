@@ -42,6 +42,23 @@ node --import tsx packages/cli/src/index.ts check fixtures/local.json
 
 The stdio adapter is deliberately conservative: one request is written per line, one JSON response is read per request, process lifetime is bounded by the session, and payloads pass through normalization and redaction before persistence.
 
+Replay a previously captured cassette without starting a provider:
+
+```ts
+import { cassetteFromJsonl } from "./packages/core/src/index.js";
+import { replayCassette } from "./packages/transport/src/replay.js";
+
+const cassette = cassetteFromJsonl(
+  await readFile("fixtures/local.jsonl", "utf8")
+);
+const result = replayCassette(cassette, [
+  { method: "tools/list", params: { query: "cassetta" } },
+]);
+console.log(result.responses);
+```
+
+Replay is strict by design. It fails when the number of requests differs, when entries are not ordered as request/response pairs, or when a request drifts from the recorded normalized message. The error includes the cassette sequence to inspect.
+
 To use the domain core directly:
 
 ```ts
@@ -54,25 +71,27 @@ const safeEntry = prepareEntry({
   message: { method: "tools/list", token: "never-committed" },
 });
 
-console.log(cassetteToJsonl({
-  version: 1,
-  name: "baseline",
-  createdAt: new Date().toISOString(),
-  entries: [safeEntry],
-}));
+console.log(
+  cassetteToJsonl({
+    version: 1,
+    name: "baseline",
+    createdAt: new Date().toISOString(),
+    entries: [safeEntry],
+  })
+);
 ```
 
 ## Architecture
 
 The domain core is independent from transports and presentation. It exposes typed messages, deterministic transforms, JSONL persistence, and diffs. The stdio adapter feeds the same `CassetteEntry` contract without changing the core; Streamable HTTP remains a planned adapter.
 
-| Layer | Responsibility |
-|---|---|
-| Domain core | Messages, normalization, redaction, cassette serialization, diffs |
-| Transport adapters | MCP-like stdio capture boundary; HTTP remains planned |
-| CLI | Stable commands, human output, JSON output, exit codes |
-| CI integration | Run checks and fail on meaningful behavioral drift |
-| Product surface | Explain the workflow and help contributors understand the boundary |
+| Layer              | Responsibility                                                     |
+| ------------------ | ------------------------------------------------------------------ |
+| Domain core        | Messages, normalization, redaction, cassette serialization, diffs  |
+| Transport adapters | MCP-like stdio capture boundary; HTTP remains planned              |
+| CLI                | Stable commands, human output, JSON output, exit codes             |
+| CI integration     | Run checks and fail on meaningful behavioral drift                 |
+| Product surface    | Explain the workflow and help contributors understand the boundary |
 
 ## Security model
 
@@ -86,7 +105,7 @@ The design and implementation plan lives in [`tasks/plan.md`](tasks/plan.md). Co
 
 ## Roadmap
 
-The next milestones are an MCP SDK-native stdio proxy, Streamable HTTP support, signed cassette manifests, schema-aware contract assertions, a replay report, and a GitHub Action that uploads a compact diff artifact on failure. These extensions are designed around the existing ports rather than a rewrite.
+The next milestones are an MCP SDK-native stdio proxy, Streamable HTTP support, signed cassette manifests, schema-aware contract assertions, a human-readable replay report, and a GitHub Action that uploads a compact diff artifact on failure. These extensions are designed around the existing ports rather than a rewrite.
 
 ## License
 
