@@ -36,7 +36,7 @@ The current MVP does not claim full MCP protocol conformance, OAuth correctness,
 | Area | Status | Reason |
 |---|---|---|
 | GitHub Actions execution on the hosted runner | **PARTIALLY VERIFIED** | Workflow configuration was inspected and updated, but a hosted Actions run was not triggered in this local session. |
-| Package tarball installation from a clean checkout | **VERIFIED** | `@cassetta/cli@0.4.0` was packed, installed into an isolated npm prefix, and its installed `cassetta` binary passed `--help` and `check`. |
+| Package tarball installation from a clean checkout | **VERIFIED** | `@cassetta/cli@0.5.0` was packed, installed into an isolated npm prefix, and its installed `cassetta` binary passed `--help` and `check`. |
 | SARIF upload to GitHub Code Scanning | **NOT VERIFIED** | Output generation was tested, but upload requires repository permissions and a hosted workflow run. |
 | Cross-platform behavior | **NOT VERIFIED** | Tests ran on Ubuntu only. |
 | Streamable HTTP and OAuth transport | **NOT VERIFIED** | Intentionally outside the MVP transport boundary. |
