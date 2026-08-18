@@ -12,8 +12,9 @@
     "check": "tsc --noEmit",
     "test:core": "vitest run --root packages/core src/index.test.ts --coverage",
     "test:transport": "vitest run --root packages/transport",
+    "test:cli": "pnpm build:cli && rm -rf /tmp/cassetta-smoke && mkdir -p /tmp/cassetta-smoke && node packages/cli/dist/cassetta.mjs capture-stdio examples/requests.json /tmp/cassetta-smoke/baseline.jsonl node examples/fixture-server.mjs && node packages/cli/dist/cassetta.mjs check /tmp/cassetta-smoke/baseline.jsonl --json && node packages/cli/dist/cassetta.mjs replay /tmp/cassetta-smoke/baseline.jsonl examples/requests.json --json && cp /tmp/cassetta-smoke/baseline.jsonl /tmp/cassetta-smoke/actual.jsonl && node packages/cli/dist/cassetta.mjs diff /tmp/cassetta-smoke/baseline.jsonl /tmp/cassetta-smoke/actual.jsonl --json",
     "format": "prettier --write .",
-    "format:check": "prettier --check packages/**/*.ts examples/**/*.mjs README.md CONTRIBUTING.md SECURITY.md CHANGELOG.md .github/**/*.yml package.json packages/transport/README.md"
+    "format:check": "prettier --check packages/**/*.ts examples/**/*.mjs README.md CONTRIBUTING.md SECURITY.md CHANGELOG.md .github/**/*.yml package.json packages/transport/README.md docs/**/*.md docs/adrs/*.md tasks/*.md"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

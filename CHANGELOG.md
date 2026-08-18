@@ -18,6 +18,12 @@ This release adds a local line-delimited JSON-RPC stdio transport boundary. It c
 
 ### Added
 
+- Typed cassette-format errors with line and sequence context, strict direction and latency validation, and deterministic JSONL checks.
+- Request-aware offline replay in the CLI with stable exit codes and SARIF-shaped diff output.
+- Stdio failure handling for timeouts, invalid JSON, missing executables, stream errors, and guaranteed cleanup.
+- A repository-level CLI smoke command and CI quality-gate step covering capture, check, replay, and equal diff.
+- Architecture contract, ADRs, threat model, failure matrix, verification record, and a product-focused README.
+
 - Framework-free TypeScript core for typed protocol entries.
 - Deterministic normalization for volatile IDs, timestamps, and object ordering.
 - Default secret redaction for common credential keys and bearer-like values.
