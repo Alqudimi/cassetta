@@ -1,73 +1,157 @@
-# Implementation Plan: Cassetta
+# Implementation Plan: Cassetta Forge Release
 
 ## Overview
-Cassetta is a local-first, provider-neutral contract-testing and deterministic replay toolkit for MCP JSON-RPC workflows. The first release combines a domain core, a JSONL cassette format, a CLI surface, and a polished static product page that makes the workflow understandable without external credentials.
 
-## Architecture Decisions
+Cassetta will be hardened from an early local-first prototype into a focused Open Source release for deterministic MCP/JSON-RPC behavior evidence. The work preserves the existing TypeScript ESM monorepo and cassette v1 format while completing the critical path: capture, normalize, redact, validate, replay offline, diff, report, and gate in CI.
 
-| Decision | Rationale |
-|---|---|
-| TypeScript ESM monorepo shape | Matches the protocol ecosystem and keeps the domain core reusable by CLI, tests, and future adapters. |
-| Pure domain core with explicit ports | Recording, replay, redaction, normalization, and contract evaluation remain testable without a live server or network. |
-| JSONL cassette format | Streamable, diffable in Git, easy to inspect, and suitable for incremental writes. |
-| Deterministic normalization before comparison | Removes volatile IDs, timestamps, and ordering noise while preserving meaningful behavior changes. |
-| Policy-driven redaction | Prevents secrets from entering committed artifacts and allows project-specific patterns without coupling to a provider. |
-| Exit-code based CLI | Makes the tool useful in CI and local scripts without a dashboard dependency. |
-| Static product UI in the webdev scaffold | Provides an immediately reviewable product surface while keeping the executable core independent from browser/server code. |
+## Architecture decisions
 
-## Domain flow
+The domain core remains framework-free and network-free. Transport adapters own process lifetime and framing. The CLI owns filesystem boundaries, output modes, and exit codes. JSONL remains the persisted artifact because it is streamable, diffable, inspectable, and easy to commit. No database, hosted service, LLM, Docker dependency, or browser runtime is required for the MVP.
 
-```mermaid
-flowchart LR
-  Client[Agent or MCP client] --> Proxy[Transport adapter]
-  Proxy --> Server[MCP server]
-  Proxy --> Capture[Capture session]
-  Capture --> Normalize[Normalize volatile fields]
-  Normalize --> Redact[Redact secrets]
-  Redact --> Cassette[(JSONL cassette)]
-  Cassette --> Replay[Offline replay]
-  Cassette --> Contract[Contract assertions]
-  Replay --> Diff[Behavior diff]
-  Contract --> CI[CI exit code]
-  Diff --> CI
+The selected contract and threat model are documented in [`docs/architecture.md`](../docs/architecture.md). The repository’s existing public commands are preserved where practical; behavior is extended additively, with mismatch and invalid-input outcomes made explicit rather than silently successful.
+
+## Dependency graph
+
+```text
+Cassette types and invariants
+    ↓
+Canonical normalization + redaction + JSONL parser
+    ↓
+Diff/replay domain services
+    ↓
+Stdio capture adapter
+    ↓
+CLI commands and output contracts
+    ↓
+Fixtures, CI, package, documentation, release
 ```
 
-## MVP acceptance criteria
+## Phase 1: Contract hardening
 
-| Area | Done when |
-|---|---|
-| Core model | Requests, responses, timing, metadata, and assertions have typed representations. |
-| Cassette | A cassette can be written, read, normalized, redacted, and compared deterministically. |
-| CLI | `record`, `replay`, `diff`, and `check` have useful help, stable exit codes, and JSON/text output. |
-| Security | Default redaction covers common secret keys and bearer tokens; path handling rejects traversal. |
-| Tests | Unit, integration, failure, and regression tests exercise the domain and CLI paths. |
-| Docs | README, architecture, protocol, configuration, contributing, security, and changelog exist. |
-| CI | GitHub Actions runs formatting, type checking, tests, coverage, and dependency audit. |
-| Product surface | Landing page explains the problem, workflow, artifact format, CI usage, and roadmap. |
+### Task 1: Validate and canonicalize cassette input
+
+**Acceptance criteria:** cassette headers, versions, sequences, directions, and JSON values are validated; malformed input raises a typed error with line/sequence context; round-trip serialization remains deterministic.
+
+**Verification:** core unit tests pass; malformed JSONL and unsupported versions are covered; existing cassette fixtures remain readable.
+
+**Dependencies:** None. **Scope:** Medium.
+
+### Task 2: Make redaction and normalization explicit
+
+**Acceptance criteria:** normalization occurs before redaction; default policies cover documented secret keys and bearer-like values; custom policies are deterministic; reports never include raw matched secret values.
+
+**Verification:** positive and negative tests cover nested objects, arrays, value patterns, custom replacement, IDs, timestamps, and key ordering.
+
+**Dependencies:** Task 1. **Scope:** Small.
+
+## Checkpoint: Core
+
+The core package must type-check, pass focused tests, and read/write the existing v1 fixtures before transport work proceeds.
+
+## Phase 2: Capture and replay
+
+### Task 3: Harden stdio lifecycle and framing
+
+**Acceptance criteria:** capture passes executable and argv without a shell; it handles spawn errors, process exit, malformed JSON, timeout, stderr, and cleanup deterministically; empty requests are rejected before spawn.
+
+**Verification:** integration fixtures cover success, timeout, invalid JSON, early exit, non-zero exit, stderr, and multiple request/response pairs.
+
+**Dependencies:** Tasks 1–2. **Scope:** Large; split by failure case if needed.
+
+### Task 4: Complete offline replay contract
+
+**Acceptance criteria:** replay never starts a provider or opens a network connection; supplied requests are normalized and compared against cassette pairs; mismatch output identifies pair and path; inspection-only replay remains available as an explicit mode if needed.
+
+**Verification:** replay success, count mismatch, request mismatch, malformed pair, and side-effect absence tests pass.
+
+**Dependencies:** Task 1. **Scope:** Medium.
+
+## Checkpoint: Critical path
+
+A clean fixture server can be captured, persisted, loaded, replayed offline, and rejected with a useful non-zero result when behavior drifts.
+
+## Phase 3: Diff and CI surface
+
+### Task 5: Stabilize diff/report outputs
+
+**Acceptance criteria:** equal cassettes return zero; differences return one; invalid inputs return two; JSON output is stable; human output includes sequence and evidence path; output is safe for CI logs.
+
+**Verification:** CLI smoke tests assert stdout shape and exit codes for equal, changed, added, removed, malformed, and missing files.
+
+**Dependencies:** Tasks 1–4. **Scope:** Medium.
+
+### Task 6: Add SARIF and GitHub Action example
+
+**Acceptance criteria:** diff/validation findings can be emitted as valid SARIF 2.1.0 with rule, message, and location-like evidence; a minimal workflow runs the gate without secrets or hosted services.
+
+**Verification:** parse generated SARIF, run workflow syntax checks where available, and exercise the fixture repository locally.
+
+**Dependencies:** Task 5. **Scope:** Medium.
+
+## Phase 4: Failure, security, and performance lab
+
+### Task 7: Execute the failure matrix and threat model
+
+**Acceptance criteria:** tests cover invalid, empty, large, concurrent, missing-config, network-isolation, database-irrelevant, invalid-credential, and unexpected-data conditions; unsafe shell/path behavior is rejected; replay has no provider side effect.
+
+**Verification:** full tests, dependency audit, secret scan, and a red-team checklist are recorded in `docs/verification.md`.
+
+**Dependencies:** Tasks 3–6. **Scope:** Large; divide into failure and security slices.
+
+### Task 8: Measure only critical paths
+
+**Acceptance criteria:** capture/replay/diff benchmark inputs and method are documented; no fabricated baseline is used; results are used only to catch regressions or explain limits.
+
+**Verification:** benchmark command runs in the available environment and writes a reproducible report.
+
+**Dependencies:** Tasks 4–5. **Scope:** Small.
+
+## Phase 5: Open Source product surface
+
+### Task 9: Rewrite documentation for conversion
+
+**Acceptance criteria:** README answers what, why, who, how, installation, first run, CI, limitations, and contribution path within the first screen and quick start; every command in README is tested.
+
+**Verification:** clean checkout runs all documented commands; links and examples are checked.
+
+**Dependencies:** Tasks 1–8. **Scope:** Medium.
+
+### Task 10: Harden contribution and release surfaces
+
+**Acceptance criteria:** LICENSE, SECURITY, CODE_OF_CONDUCT, CONTRIBUTING, CHANGELOG, issue templates, PR template, architecture docs, and release workflow are coherent and accurate.
+
+**Verification:** repository checklist and clean-install test pass.
+
+**Dependencies:** Task 9. **Scope:** Medium.
+
+## Phase 6: Release candidate and publication
+
+### Task 11: Clean-room build and package verification
+
+**Acceptance criteria:** fresh install, type check, tests, build, package tarball install, CLI smoke, and documentation examples pass without local-only paths or undeclared files.
+
+**Verification:** commands and evidence captured in `docs/verification.md`.
+
+**Dependencies:** Tasks 1–10. **Scope:** Medium.
+
+### Task 12: GitHub release and post-launch audit
+
+**Acceptance criteria:** logical commits are pushed, Actions and security configuration are verified where permissions allow, a release tag/artifact is created, and the online README/package path is checked.
+
+**Verification:** repository URL, branch, commits, release, workflows, and limitations are recorded in the final report with VERIFIED/PARTIALLY VERIFIED/NOT VERIFIED labels.
+
+**Dependencies:** Task 11. **Scope:** Medium.
 
 ## Risks and mitigations
 
-| Risk | Impact | Mitigation |
-|---|---|---|
-| MCP protocol changes | High | Keep transport adapter behind an interface; test against fixture envelopes. |
-| Accidental secret capture | High | Redact before persistence, add negative tests, and fail closed for unsafe paths. |
-| False-positive diffs | Medium | Normalize only documented volatile fields and expose the transformation in reports. |
-| Overbuilding a dashboard | Medium | Keep MVP CLI/core-first; UI is documentation and workflow visualization, not the runtime. |
-| Name collision | Low | Use Cassetta as a product name and verify repository search before creation. |
+| Risk                                                     | Impact | Mitigation                                                                           |
+| -------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------ |
+| Existing cassette users depend on observable v1 behavior | High   | Additive changes, fixtures, explicit version checks, regression tests.               |
+| Redaction misses business-sensitive values               | High   | Policy customization, warnings, synthetic fixtures, never claim perfect discovery.   |
+| Replay gives false confidence                            | High   | Strict scope, explicit non-goals, no claim of full protocol or semantic coverage.    |
+| Stdio framing differs across servers                     | Medium | Narrow adapter contract, clear errors, future transport adapters behind interfaces.  |
+| GitHub permissions or Actions limitations                | Medium | Verify what is possible; document anything not verified instead of claiming success. |
 
-## Phases
+## Definition of done
 
-### Phase 1: Core domain and cassette format
-Implement types, normalization, redaction, JSONL persistence, and deterministic diffing.
-
-### Phase 2: CLI and fixtures
-Add commands, sample fixture server/client messages, human-readable reports, and machine-readable output.
-
-### Phase 3: Open Source foundation
-Add license, contributor policy, security policy, code of conduct, changelog, docs, issue templates, and CI.
-
-### Phase 4: Product surface
-Replace the scaffold home page with the Signal Archive landing experience and ensure the visual surface accurately reflects the executable workflow.
-
-### Phase 5: Verification and publication
-Run checks in a clean install, build, tests, coverage, audit, Docker smoke test where available, then create and push the GitHub repository.
+The MVP is complete only when it is useful without a hosted service, installable from a clean checkout, tested on success and failure paths, secure by default, documented with executable commands, and backed by a GitHub repository and evidence report.

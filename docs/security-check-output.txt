@@ -1,0 +1,6 @@
+=== DEPENDENCY AUDIT ===
+No known vulnerabilities found
+AUDIT_EXIT=0
+=== SECRET PATTERN SCAN ===
+SECRET_SCAN_EXIT=0
+=== DIFF CHECK ===
