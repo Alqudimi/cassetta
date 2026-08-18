@@ -27,7 +27,7 @@ describe("stdio transport", () => {
         {
           id: "request-1",
           method: "tools/call",
-          params: { query: "cassetta", authorization: "Bearer local-secret" },
+          params: { query: "cassetta", authorization: "Bearer <local>" },
         },
       ],
       {
@@ -51,5 +51,50 @@ describe("stdio transport", () => {
       token: "<redacted>",
     });
     expect(result.cassette.entries[1].latencyMs).toEqual(expect.any(Number));
+  });
+
+  it("fails closed when the server times out", async () => {
+    const timeoutFixture = join(
+      tmpdir(),
+      `cassetta-timeout-${process.pid}.mjs`
+    );
+    await writeFile(timeoutFixture, "setTimeout(() => {}, 1000);");
+    await chmod(timeoutFixture, 0o600);
+
+    await expect(
+      captureStdioSession([{ id: 1, method: "tools/list" }], {
+        command: process.execPath,
+        args: [timeoutFixture],
+        timeoutMs: 20,
+      })
+    ).rejects.toThrow("Timed out");
+  });
+
+  it("rejects malformed JSON emitted by the server", async () => {
+    const invalidFixture = join(
+      tmpdir(),
+      `cassetta-invalid-${process.pid}.mjs`
+    );
+    await writeFile(
+      invalidFixture,
+      'process.stdin.once("data", () => { process.stdout.write("not-json\\n"); setTimeout(() => {}, 100); });'
+    );
+    await chmod(invalidFixture, 0o600);
+
+    await expect(
+      captureStdioSession([{ id: 1, method: "tools/list" }], {
+        command: process.execPath,
+        args: [invalidFixture],
+      })
+    ).rejects.toThrow("invalid JSON");
+  });
+
+  it("reports a missing executable instead of hanging", async () => {
+    await expect(
+      captureStdioSession([{ id: 1, method: "tools/list" }], {
+        command: "cassetta-command-that-does-not-exist",
+        timeoutMs: 100,
+      })
+    ).rejects.toThrow("stream failed");
   });
 });

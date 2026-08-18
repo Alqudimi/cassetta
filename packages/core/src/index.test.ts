@@ -77,4 +77,30 @@ describe("Cassetta core", () => {
       "removed"
     );
   });
+
+  it("rejects malformed JSON with a line-aware format error", () => {
+    expect(() => cassetteFromJsonl('{"cassette":"x","version":1}\n{')).toThrow(
+      "Invalid JSON in cassette entry"
+    );
+  });
+
+  it("rejects invalid directions and negative latency", () => {
+    const invalidDirection = {
+      version: 1 as const,
+      name: "bad",
+      createdAt: "now",
+      entries: [{ ...entry({ method: "tools/list" }), direction: "event" }],
+    };
+    expect(() => cassetteToJsonl(invalidDirection)).toThrow(
+      "Invalid direction"
+    );
+
+    const invalidLatency = {
+      version: 1 as const,
+      name: "bad",
+      createdAt: "now",
+      entries: [{ ...entry({ method: "tools/list" }), latencyMs: -1 }],
+    };
+    expect(() => cassetteToJsonl(invalidLatency)).toThrow("Invalid latency");
+  });
 });
