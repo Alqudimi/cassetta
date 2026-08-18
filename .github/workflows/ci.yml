@@ -25,4 +25,6 @@ jobs:
       - run: pnpm vitest run --root packages/core src/index.test.ts --coverage
       - run: pnpm test:transport
       - run: pnpm build
+      - run: pnpm --dir packages/cli pack --pack-destination /tmp/cassetta-pack
+      - run: test -f /tmp/cassetta-pack/cassetta-cli-0.4.0.tgz
       - run: pnpm audit --audit-level high

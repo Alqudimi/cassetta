@@ -2,6 +2,10 @@
 
 All notable changes to Cassetta are documented here.
 
+## [0.4.0] — 2026-08-18
+
+This release packages the CLI as an installable `@cassetta/cli` artifact with a `cassetta` bin entry, a Node.js 20 engine requirement, a reproducible esbuild bundle, and a tarball verification path. The root build now produces the CLI executable alongside the web build, so the release can be exercised as a user-facing command rather than only through TypeScript sources.
+
 ## [0.3.0] — 2026-08-17
 
 This release adds a strict offline replay runner that returns recorded responses without starting a provider, reports request drift with cassette sequence context, expands transport coverage to four tests, and adds a formatting guard to local scripts and CI. The existing stdio capture path remains unchanged and continues to redact before persistence.

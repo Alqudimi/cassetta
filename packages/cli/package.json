@@ -1,0 +1,17 @@
+{
+  "name": "@cassetta/cli",
+  "version": "0.4.0",
+  "description": "Capture, replay, diff, and check deterministic MCP workflow cassettes.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "cassetta": "dist/cassetta.mjs"
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "pnpm --dir ../.. build:cli"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

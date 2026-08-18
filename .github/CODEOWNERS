@@ -1,0 +1,8 @@
+# Default owner for all repository paths.
+* @Alqudimi
+
+# Domain boundaries deserve explicit review.
+/packages/core/ @Alqudimi
+/packages/transport/ @Alqudimi
+/packages/cli/ @Alqudimi
+/.github/ @Alqudimi

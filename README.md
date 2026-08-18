@@ -2,6 +2,8 @@
 
 > Record once. Reproduce without the network.
 
+[![CI](https://github.com/Alqudimi/cassetta/actions/workflows/ci.yml/badge.svg)](https://github.com/Alqudimi/cassetta/actions/workflows/ci.yml) [![Latest release](https://img.shields.io/github/v/release/Alqudimi/cassetta?include_prereleases)](https://github.com/Alqudimi/cassetta/releases) [![License](https://img.shields.io/github/license/Alqudimi/cassetta)](LICENSE)
+
 Cassetta is a **local-first contract-testing and deterministic replay toolkit for MCP and AI tool workflows**. It captures a JSON-RPC session, normalizes volatile fields, redacts secrets before persistence, and turns the result into a reviewable cassette that can be replayed and checked in CI.
 
 ## Why Cassetta exists
@@ -24,6 +26,17 @@ live JSON-RPC session → capture → normalize → redact → cassette.jsonl
 ```
 
 ## Quick start
+
+For the installable command-line artifact, build the repository and consume the generated tarball locally:
+
+```bash
+pnpm build:cli
+pnpm --dir packages/cli pack --pack-destination /tmp/cassetta-pack
+npm install --global /tmp/cassetta-pack/cassetta-cli-0.4.0.tgz
+cassetta --help
+```
+
+The package declares Node.js 20 or newer and exposes a `cassetta` binary. Publishing to npm is intentionally separate from the GitHub release so registry credentials are never required for local development or CI.
 
 ```bash
 pnpm install
