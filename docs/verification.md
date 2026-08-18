@@ -6,20 +6,20 @@ This record captures the evidence produced while hardening Cassetta as the selec
 
 ## Verified checks
 
-| Area | Command or evidence | Result |
-|---|---|---|
-| Type safety | `pnpm check` | **VERIFIED** — TypeScript completed without errors. |
-| Core behavior | `pnpm vitest run --root packages/core src/index.test.ts` | **VERIFIED** — 8 tests passed, including malformed JSON, invalid direction, negative latency, normalization, redaction, JSONL round-trip, and diffs. |
-| Transport behavior | `pnpm test:transport` | **VERIFIED** — 7 tests passed, including capture, timeout, malformed output, missing executable, replay success, mismatch, and malformed pairing. |
-| CLI smoke | `pnpm test:cli` | **VERIFIED** — local fixture capture, check, offline replay, and equal diff completed successfully. |
-| Full build | `pnpm build` | **VERIFIED** — Vite product surface, server bundle, and CLI bundle built. Vite emitted pre-existing analytics placeholder warnings. |
-| Formatting | `pnpm exec prettier --check ...` | **VERIFIED** for changed implementation, docs, workflow, and package files. |
-| Dependency audit | `pnpm audit --audit-level high` | **VERIFIED** — no known vulnerabilities reported by pnpm at audit time. |
-| Secret pattern scan | `git grep` scan excluding lockfile | **VERIFIED** — no credential-like patterns remained after synthetic fixtures were changed to angle-bracket placeholders. |
-| Diff hygiene | `git diff --check` | **VERIFIED** — no whitespace errors. |
-| SARIF output | `cassetta diff ... --sarif` | **VERIFIED** — emitted SARIF 2.1.0-shaped JSON with tool metadata and invocation status. |
-| Failure exit codes | malformed check, replay mismatch, empty capture, missing command | **VERIFIED** — observed exit codes `2`, `1`, `2`, and `2` respectively. |
-| Offline check baseline | 20 repeated `cassetta check` runs on a captured local cassette | **VERIFIED** — elapsed 0.921 seconds, user 0.760 seconds, system 0.173 seconds in the sandbox; this is a local smoke baseline, not a cross-machine benchmark. |
+| Area                   | Command or evidence                                              | Result                                                                                                                                                        |
+| ---------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Type safety            | `pnpm check`                                                     | **VERIFIED** — TypeScript completed without errors.                                                                                                           |
+| Core behavior          | `pnpm vitest run --root packages/core src/index.test.ts`         | **VERIFIED** — 8 tests passed, including malformed JSON, invalid direction, negative latency, normalization, redaction, JSONL round-trip, and diffs.          |
+| Transport behavior     | `pnpm test:transport`                                            | **VERIFIED** — 7 tests passed, including capture, timeout, malformed output, missing executable, replay success, mismatch, and malformed pairing.             |
+| CLI smoke              | `pnpm test:cli`                                                  | **VERIFIED** — local fixture capture, check, offline replay, and equal diff completed successfully.                                                           |
+| Full build             | `pnpm build`                                                     | **VERIFIED** — Vite product surface, server bundle, and CLI bundle built. Vite emitted pre-existing analytics placeholder warnings.                           |
+| Formatting             | `pnpm exec prettier --check ...`                                 | **VERIFIED** for changed implementation, docs, workflow, and package files.                                                                                   |
+| Dependency audit       | `pnpm audit --audit-level high`                                  | **VERIFIED** — no known vulnerabilities reported by pnpm at audit time.                                                                                       |
+| Secret pattern scan    | `git grep` scan excluding lockfile                               | **VERIFIED** — no credential-like patterns remained after synthetic fixtures were changed to angle-bracket placeholders.                                      |
+| Diff hygiene           | `git diff --check`                                               | **VERIFIED** — no whitespace errors.                                                                                                                          |
+| SARIF output           | `cassetta diff ... --sarif`                                      | **VERIFIED** — emitted SARIF 2.1.0-shaped JSON with tool metadata and invocation status.                                                                      |
+| Failure exit codes     | malformed check, replay mismatch, empty capture, missing command | **VERIFIED** — observed exit codes `2`, `1`, `2`, and `2` respectively.                                                                                       |
+| Offline check baseline | 20 repeated `cassetta check` runs on a captured local cassette   | **VERIFIED** — elapsed 0.921 seconds, user 0.760 seconds, system 0.173 seconds in the sandbox; this is a local smoke baseline, not a cross-machine benchmark. |
 
 ## Failure evidence
 
@@ -33,13 +33,17 @@ The current MVP does not claim full MCP protocol conformance, OAuth correctness,
 
 ## Partially verified or not verified
 
-| Area | Status | Reason |
-|---|---|---|
-| GitHub Actions execution on the hosted runner | **PARTIALLY VERIFIED** | Workflow configuration was inspected and updated, but a hosted Actions run was not triggered in this local session. |
-| Package tarball installation from a clean checkout | **VERIFIED** | `@cassetta/cli@0.5.0` was packed, installed into an isolated npm prefix, and its installed `cassetta` binary passed `--help` and `check`. |
-| SARIF upload to GitHub Code Scanning | **NOT VERIFIED** | Output generation was tested, but upload requires repository permissions and a hosted workflow run. |
-| Cross-platform behavior | **NOT VERIFIED** | Tests ran on Ubuntu only. |
-| Streamable HTTP and OAuth transport | **NOT VERIFIED** | Intentionally outside the MVP transport boundary. |
+| Area                                               | Status           | Reason                                                                                                                                    |
+| -------------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| GitHub Actions execution on the hosted runner      | **VERIFIED**     | Pull-request CI run 32165875983 and release run 32166244615 completed successfully.                                                       |
+| Package tarball installation from a clean checkout | **VERIFIED**     | `@cassetta/cli@0.5.0` was packed, installed into an isolated npm prefix, and its installed `cassetta` binary passed `--help` and `check`. |
+| SARIF upload to GitHub Code Scanning               | **NOT VERIFIED** | Output generation was tested, but upload requires repository permissions and a hosted workflow run.                                       |
+| Cross-platform behavior                            | **NOT VERIFIED** | Tests ran on Ubuntu only.                                                                                                                 |
+| Streamable HTTP and OAuth transport                | **NOT VERIFIED** | Intentionally outside the MVP transport boundary.                                                                                         |
+
+## Online publication evidence
+
+The repository is public at `https://github.com/Alqudimi/cassetta`, uses `main` as its default branch, reports MIT license metadata, and has the corrected `v0.5.0` release with `cassetta-cli-0.5.0.tgz`. GitHub reported the merged pull request, successful main CI, successful pull-request CI, and successful release workflow. Discussions were not enabled, and GitHub’s API did not expose a `security_policy_url`; those remain explicit follow-up items.
 
 ## Reproduction
 
