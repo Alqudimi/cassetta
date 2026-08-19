@@ -55,6 +55,8 @@ node --import tsx packages/cli/src/index.ts check fixtures/local.json
 
 The stdio adapter is deliberately conservative: one request is written per line, one JSON response is read per request, process lifetime is bounded by the session, and payloads pass through normalization and redaction before persistence.
 
+HTTP capture is available through the same transport package. It accepts an injected or native `fetch`, validates `http`/`https` endpoints, defaults to a 10-second timeout and 1 MiB response limit, and records only normalized and redacted JSON-RPC messages. It does not print bodies or credentials and surfaces transport failures as typed `HttpTransportError` values.
+
 Replay a previously captured cassette without starting a provider:
 
 ```ts
@@ -96,12 +98,12 @@ console.log(
 
 ## Architecture
 
-The domain core is independent from transports and presentation. It exposes typed messages, deterministic transforms, JSONL persistence, and diffs. The stdio adapter feeds the same `CassetteEntry` contract without changing the core; Streamable HTTP remains a planned adapter.
+The domain core is independent from transports and presentation. It exposes typed messages, deterministic transforms, JSONL persistence, and diffs. The stdio and HTTP adapters feed the same `CassetteEntry` contract without changing the core; full Streamable HTTP session semantics remain a planned extension.
 
 | Layer              | Responsibility                                                     |
 | ------------------ | ------------------------------------------------------------------ |
 | Domain core        | Messages, normalization, redaction, cassette serialization, diffs  |
-| Transport adapters | MCP-like stdio capture boundary; HTTP remains planned              |
+| Transport adapters | MCP-like stdio and bounded HTTP JSON-RPC capture boundaries        |
 | CLI                | Stable commands, human output, JSON output, exit codes             |
 | CI integration     | Run checks and fail on meaningful behavioral drift                 |
 | Product surface    | Explain the workflow and help contributors understand the boundary |
@@ -118,7 +120,7 @@ The design and implementation plan lives in [`tasks/plan.md`](tasks/plan.md). Co
 
 ## Roadmap
 
-The next milestones are an MCP SDK-native stdio proxy, Streamable HTTP support, signed cassette manifests, schema-aware contract assertions, a human-readable replay report, and a GitHub Action that uploads a compact diff artifact on failure. These extensions are designed around the existing ports rather than a rewrite.
+The next milestones are an MCP SDK-native stdio proxy, Streamable HTTP session semantics, signed cassette manifests, schema-aware contract assertions, a human-readable replay report, and a GitHub Action that uploads a compact diff artifact on failure. These extensions are designed around the existing ports rather than a rewrite.
 
 ## License
 

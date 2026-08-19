@@ -2,6 +2,10 @@
 
 All notable changes to Cassetta are documented here.
 
+## [0.5.0] — 2026-08-19
+
+This release adds a bounded HTTP JSON-RPC capture adapter with endpoint validation, caller-injected fetch support, a 10-second default timeout, a 1 MiB response limit, redaction-before-persistence, and typed failures for invalid endpoints, timeouts, non-2xx responses, invalid JSON, and oversized payloads. Transport coverage now includes stdio, HTTP, and offline replay paths.
+
 ## [0.4.0] — 2026-08-18
 
 This release packages the CLI as an installable `@cassetta/cli` artifact with a `cassetta` bin entry, a Node.js 20 engine requirement, a reproducible esbuild bundle, and a tarball verification path. The root build now produces the CLI executable alongside the web build, so the release can be exercised as a user-facing command rather than only through TypeScript sources.
