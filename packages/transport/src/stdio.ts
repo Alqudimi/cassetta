@@ -53,14 +53,20 @@ const withTimeout = async <T>(
 };
 
 const readResponse = (
-  process: ChildProcessWithoutNullStreams,
+  child: ChildProcessWithoutNullStreams,
   timeoutMs: number
 ): Promise<ProtocolMessage> => {
-  const reader = createInterface({ input: process.stdout });
+  const reader = createInterface({ input: child.stdout, crlfDelay: Infinity });
   return withTimeout(
     new Promise<ProtocolMessage>((resolve, reject) => {
-      const onLine = (line: string) => {
+      const cleanup = () => {
         reader.close();
+        child.stdout.removeListener("error", onError);
+        child.removeListener("error", onError);
+        child.removeListener("exit", onExit);
+      };
+      const onLine = (line: string) => {
+        cleanup();
         try {
           resolve(JSON.parse(line) as ProtocolMessage);
         } catch (error) {
@@ -71,14 +77,26 @@ const readResponse = (
           );
         }
       };
-      const onExit = (code: number | null) =>
+      const onError = (error: Error) => {
+        cleanup();
+        reject(
+          new StdioTransportError("The stdio server stream failed", {
+            cause: error,
+          })
+        );
+      };
+      const onExit = (code: number | null, signal: NodeJS.Signals | null) => {
+        cleanup();
         reject(
           new StdioTransportError(
-            `The stdio server exited before responding (code ${code ?? "unknown"})`
+            `The stdio server exited before responding (code ${code ?? "unknown"}, signal ${signal ?? "none"})`
           )
         );
+      };
       reader.once("line", onLine);
-      process.once("exit", onExit);
+      child.stdout.once("error", onError);
+      child.once("error", onError);
+      child.once("exit", onExit);
     }),
     timeoutMs,
     "a JSON-RPC response"
@@ -89,15 +107,25 @@ export const captureStdioSession = async (
   requests: ProtocolMessage[],
   options: StdioSessionOptions
 ): Promise<StdioSessionResult> => {
+  if (!options.command.trim())
+    throw new StdioTransportError(
+      "A stdio session requires an executable command"
+    );
   if (requests.length === 0)
     throw new StdioTransportError(
       "A stdio session requires at least one request"
     );
   const timeoutMs = options.timeoutMs ?? 2_000;
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0)
+    throw new StdioTransportError(
+      "The stdio timeout must be a positive number"
+    );
+
   const child = spawn(options.command, options.args ?? [], {
     cwd: options.cwd,
     env: { ...process.env, ...options.env },
     stdio: "pipe",
+    shell: false,
   });
   const stderrChunks: Buffer[] = [];
   child.stderr.on("data", (chunk: Buffer) => stderrChunks.push(chunk));
@@ -115,7 +143,13 @@ export const captureStdioSession = async (
       });
       entries.push(requestEntry);
       sequence += 1;
-      child.stdin.write(`${JSON.stringify(request)}\n`);
+      try {
+        child.stdin.write(`${JSON.stringify(request)}\n`);
+      } catch (error) {
+        throw new StdioTransportError("The stdio server input stream failed", {
+          cause: error,
+        });
+      }
       const response = await readResponse(child, timeoutMs);
       const finished = Date.now();
       entries.push(
@@ -135,7 +169,7 @@ export const captureStdioSession = async (
       : new StdioTransportError("The stdio session failed", { cause: error });
   } finally {
     child.stdin.end();
-    child.kill();
+    if (!child.killed) child.kill();
   }
 
   const cassette: Cassette = {
@@ -144,6 +178,7 @@ export const captureStdioSession = async (
     createdAt: new Date().toISOString(),
     entries,
   };
+  cassetteToJsonl(cassette);
   return { cassette, stderr: Buffer.concat(stderrChunks).toString("utf8") };
 };
 

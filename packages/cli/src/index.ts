@@ -7,36 +7,98 @@ import {
   diffEntries,
   prepareEntry,
   type Cassette,
+  type DiffLine,
   type ProtocolMessage,
 } from "../../core/src/index.js";
 import { captureStdioSession } from "../../transport/src/stdio.js";
+import { replayCassette } from "../../transport/src/replay.js";
+
+class CliUsageError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CliUsageError";
+  }
+}
 
 const usage = `Cassetta — deterministic MCP workflow artifacts
 
 Usage:
   cassetta record <input.jsonl> <output.cassette.jsonl>
   cassetta capture-stdio <requests.json> <output.cassette.jsonl> <command> [...args]
-  cassetta replay <cassette.jsonl>
-  cassetta diff <expected.jsonl> <actual.jsonl>
-  cassetta check <cassette.jsonl>
+  cassetta replay <cassette.jsonl> [requests.json] [--json]
+  cassetta diff <expected.jsonl> <actual.jsonl> [--json|--sarif]
+  cassetta check <cassette.jsonl> [--json|--sarif]
 `;
 
 const readCassette = async (file: string): Promise<Cassette> =>
   cassetteFromJsonl(await readFile(resolve(file), "utf8"));
 
-const command = process.argv[2];
-const args = process.argv.slice(3);
+const readRequests = async (file: string): Promise<ProtocolMessage[]> => {
+  let value: unknown;
+  try {
+    value = JSON.parse(await readFile(resolve(file), "utf8")) as unknown;
+  } catch (error) {
+    throw new CliUsageError(`could not parse requests JSON: ${file}`);
+  }
+  if (!Array.isArray(value))
+    throw new CliUsageError("requests.json must contain a JSON array");
+  return value as ProtocolMessage[];
+};
+
+const parseFlags = (args: string[]) => ({
+  positional: args.filter(arg => !arg.startsWith("--")),
+  json: args.includes("--json"),
+  sarif: args.includes("--sarif"),
+});
+
+const sarif = (
+  tool: string,
+  findings: Array<{ message: string; path: string }>
+) => ({
+  version: "2.1.0",
+  $schema: "https://json.schemastore.org/sarif-2.1.0.json",
+  runs: [
+    {
+      tool: {
+        driver: {
+          name: "cassetta",
+          informationUri: "https://github.com/Alqudimi/cassetta",
+        },
+      },
+      results: findings.map(finding => ({
+        ruleId: "cassette-drift",
+        level: "error",
+        message: { text: finding.message },
+        locations: [
+          { physicalLocation: { artifactLocation: { uri: finding.path } } },
+        ],
+      })),
+      invocations: [{ executionSuccessful: findings.length === 0 }],
+    },
+  ],
+});
+
+const diffFindings = (differences: DiffLine[]) =>
+  differences.map(difference => ({
+    path: difference.path,
+    message: `${difference.kind} behavior at ${difference.path}`,
+  }));
 
 const main = async (): Promise<void> => {
+  const command = process.argv[2];
+  const args = process.argv.slice(3);
   if (!command || command === "--help" || command === "-h") {
     console.log(usage);
     return;
   }
 
+  const parsed = parseFlags(args);
+  const positional = parsed.positional;
+
   if (command === "record") {
-    const [input, output] = args;
+    const [input, output] = positional;
     if (!input || !output)
-      throw new Error("record requires an input and output path");
+      throw new CliUsageError("record requires input and output paths");
     const source = await readCassette(input);
     const prepared: Cassette = {
       ...source,
@@ -48,16 +110,14 @@ const main = async (): Promise<void> => {
   }
 
   if (command === "capture-stdio") {
-    const [requestsFile, output, executable, ...commandArgs] = args;
+    const [requestsFile, output, executable, ...commandArgs] = positional;
     if (!requestsFile || !output || !executable)
-      throw new Error(
+      throw new CliUsageError(
         "capture-stdio requires requests, output, and command paths"
       );
-    const requests = JSON.parse(
-      await readFile(resolve(requestsFile), "utf8")
-    ) as ProtocolMessage[];
-    if (!Array.isArray(requests))
-      throw new Error("requests.json must contain a JSON array");
+    const requests = await readRequests(requestsFile);
+    if (requests.length === 0)
+      throw new CliUsageError("capture-stdio requires at least one request");
     const { cassette, stderr } = await captureStdioSession(requests, {
       command: executable,
       args: commandArgs,
@@ -70,12 +130,27 @@ const main = async (): Promise<void> => {
   }
 
   if (command === "replay") {
-    const [file] = args;
-    if (!file) throw new Error("replay requires a cassette path");
+    const [file, requestsFile] = positional;
+    if (!file) throw new CliUsageError("replay requires a cassette path");
     const cassette = await readCassette(file);
+    if (!requestsFile) {
+      console.log(
+        JSON.stringify(
+          {
+            cassette: cassette.name,
+            mode: "offline",
+            entries: cassette.entries,
+          },
+          null,
+          2
+        )
+      );
+      return;
+    }
+    const result = replayCassette(cassette, await readRequests(requestsFile));
     console.log(
       JSON.stringify(
-        { cassette: cassette.name, mode: "offline", entries: cassette.entries },
+        { cassette: cassette.name, mode: "offline", ...result },
         null,
         2
       )
@@ -84,37 +159,70 @@ const main = async (): Promise<void> => {
   }
 
   if (command === "diff") {
-    const [expectedFile, actualFile] = args;
+    const [expectedFile, actualFile] = positional;
     if (!expectedFile || !actualFile)
-      throw new Error("diff requires expected and actual cassette paths");
-    const expected = await readCassette(expectedFile);
-    const actual = await readCassette(actualFile);
-    const differences = diffEntries(expected.entries, actual.entries).filter(
-      line => line.kind !== "same"
+      throw new CliUsageError(
+        "diff requires expected and actual cassette paths"
+      );
+    const differences = diffEntries(
+      (await readCassette(expectedFile)).entries,
+      (await readCassette(actualFile)).entries
+    ).filter(line => line.kind !== "same");
+    const findings = diffFindings(differences);
+    console.log(
+      JSON.stringify(
+        parsed.sarif ? sarif("cassetta", findings) : { differences },
+        null,
+        2
+      )
     );
-    console.log(JSON.stringify({ differences }, null, 2));
     if (differences.length > 0) process.exitCode = 1;
     return;
   }
 
   if (command === "check") {
-    const [file] = args;
-    if (!file) throw new Error("check requires a cassette path");
+    const [file] = positional;
+    if (!file) throw new CliUsageError("check requires a cassette path");
     const cassette = await readCassette(file);
     if (cassette.entries.length === 0)
-      throw new Error("cassette has no entries");
+      throw new CliUsageError("cassette has no entries");
+    const findings = cassette.entries
+      .filter(
+        (entry, index) => entry.direction === "response" && index % 2 === 0
+      )
+      .map(entry => ({
+        path: `entries[${entry.sequence - 1}]`,
+        message: "response is not paired after a request",
+      }));
     console.log(
-      `ok: ${cassette.name} contains ${cassette.entries.length} ordered entries`
+      JSON.stringify(
+        parsed.sarif
+          ? sarif("cassetta", findings)
+          : {
+              cassette: cassette.name,
+              entries: cassette.entries.length,
+              valid: findings.length === 0,
+            },
+        null,
+        2
+      )
     );
+    if (findings.length > 0) process.exitCode = 1;
     return;
   }
 
-  throw new Error(`unknown command: ${command}`);
+  throw new CliUsageError(`unknown command: ${command}`);
 };
 
 main().catch((error: unknown) => {
+  const code =
+    error instanceof CliUsageError
+      ? 2
+      : error instanceof Error && error.name === "ReplayMismatchError"
+        ? 1
+        : 2;
   console.error(
     `error: ${error instanceof Error ? error.message : "unexpected failure"}`
   );
-  process.exitCode = 2;
+  process.exitCode = code;
 });

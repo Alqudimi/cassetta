@@ -1,4 +1,11 @@
 // Signal Archive design: the core stays framework-free and evidence-oriented. Domain code uses explicit types, deterministic transforms, and no network access.
+import {
+  CassetteFormatError,
+  validateCassette,
+  validateCassetteEntry,
+} from "./validation.js";
+
+export { CassetteFormatError } from "./validation.js";
 
 export type JsonValue =
   | null
@@ -173,36 +180,53 @@ export const diffEntries = (
   return lines;
 };
 
-export const cassetteToJsonl = (cassette: Cassette): string =>
-  [
-    JSON.stringify({
-      cassette: cassette.name,
-      version: cassette.version,
-      createdAt: cassette.createdAt,
-    }),
-    ...cassette.entries.map(entry => JSON.stringify(entry)),
-  ].join("\n") + "\n";
+export const cassetteToJsonl = (cassette: Cassette): string => {
+  validateCassette(cassette);
+  return (
+    [
+      JSON.stringify({
+        cassette: cassette.name,
+        version: cassette.version,
+        createdAt: cassette.createdAt,
+      }),
+      ...cassette.entries.map(entry => JSON.stringify(entry)),
+    ].join("\n") + "\n"
+  );
+};
 
 export const cassetteFromJsonl = (input: string): Cassette => {
-  const lines = input.split(/\r?\n/).filter(Boolean);
-  if (lines.length === 0) throw new Error("Cassette is empty");
-  const header = JSON.parse(lines[0]) as {
-    cassette?: string;
-    version?: number;
-    createdAt?: string;
-  };
+  if (typeof input !== "string" || input.trim() === "")
+    throw new CassetteFormatError("Cassette is empty");
+
+  const lines = input.split(/\r?\n/).filter(line => line.trim() !== "");
+  let header: { cassette?: unknown; version?: unknown; createdAt?: unknown };
+  try {
+    header = JSON.parse(lines[0]) as typeof header;
+  } catch (error) {
+    throw new CassetteFormatError("Invalid JSON in cassette header", {
+      line: 1,
+    });
+  }
   if (header.version !== 1 || typeof header.cassette !== "string")
-    throw new Error("Unsupported cassette header");
+    throw new CassetteFormatError("Unsupported cassette header", { line: 1 });
+
   const entries = lines.slice(1).map((line, index) => {
-    const entry = JSON.parse(line) as CassetteEntry;
-    if (entry.sequence !== index + 1)
-      throw new Error(`Invalid sequence at line ${index + 2}`);
-    return entry;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(line) as unknown;
+    } catch (error) {
+      throw new CassetteFormatError("Invalid JSON in cassette entry", {
+        line: index + 2,
+      });
+    }
+    return validateCassetteEntry(parsed, index + 1, index + 2);
   });
-  return {
+
+  return validateCassette({
     version: 1,
     name: header.cassette,
-    createdAt: header.createdAt ?? "<unknown>",
+    createdAt:
+      typeof header.createdAt === "string" ? header.createdAt : "<unknown>",
     entries,
-  };
+  });
 };

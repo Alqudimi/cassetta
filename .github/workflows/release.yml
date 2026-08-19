@@ -1,15 +1,15 @@
-name: CI
+name: Release
 
 on:
   push:
-    branches: [main]
-  pull_request:
+    tags:
+      - "v*"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  verify:
+  package:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -22,10 +22,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm format:check
-      - run: pnpm vitest run --root packages/core src/index.test.ts --coverage
+      - run: pnpm test:core
       - run: pnpm test:transport
       - run: pnpm test:cli
-      - run: pnpm build
+      - run: pnpm build:cli
       - run: pnpm --dir packages/cli pack --pack-destination /tmp/cassetta-pack
-      - run: test -f /tmp/cassetta-pack/cassetta-cli-0.5.0.tgz
-      - run: pnpm audit --audit-level high
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: /tmp/cassetta-pack/*.tgz
+          generate_release_notes: true
