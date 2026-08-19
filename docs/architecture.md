@@ -94,18 +94,18 @@ Human-readable output is for developers; `--json` is stable machine output. The 
 
 ## Failure matrix
 
-| Failure                         | Detect                     | Handle                                           | Recover                                    | Report                            |
-| ------------------------------- | -------------------------- | ------------------------------------------------ | ------------------------------------------ | --------------------------------- |
-| Invalid JSON request            | Parse at CLI boundary      | Reject before spawn                              | Correct fixture                            | File and line context             |
-| Empty request list              | Validate before spawn      | Return usage error                               | Add request                                | Stable error code                 |
-| Spawn failure                   | Child process error event  | Stop capture                                     | Fix command/permissions                    | Executable and cause              |
-| Timeout                         | Per-response timer         | Kill child and fail closed                       | Increase explicit timeout or fix server    | Pair and timeout duration         |
-| Invalid stdout JSON             | JSON parse boundary        | Stop session and kill child                      | Fix server framing                         | Response line context             |
-| Unexpected process exit         | Exit event before response | Fail capture                                     | Fix server lifecycle                       | Exit status                       |
-| Malformed cassette              | Header/entry validation    | Reject without replay                            | Regenerate or edit safely                  | Sequence/line                     |
-| Replay mismatch                 | Canonical comparison       | Return non-zero without execution                | Review diff/update baseline intentionally  | Pair and path                     |
-| Secret-like data                | Key/value policy           | Replace before persistence                       | Add project policy; use synthetic fixtures | Redaction count without raw value |
-| Large input/resource exhaustion | Size and line bounds       | Fail before unbounded allocation where practical | Split cassette or raise explicit limit     | Limit and observed size           |
+| Failure                         | Detect                                         | Handle                                                                                                                                                     | Recover                                    | Report                            |
+| ------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | --------------------------------- |
+| Invalid JSON request            | Parse at CLI boundary                          | Reject before spawn                                                                                                                                        | Correct fixture                            | File and line context             |
+| Empty request list              | Validate before spawn                          | Return usage error                                                                                                                                         | Add request                                | Stable error code                 |
+| Spawn failure                   | Child process error event                      | Stop capture                                                                                                                                               | Fix command/permissions                    | Executable and cause              |
+| Timeout                         | Per-response timer                             | Kill child and fail closed                                                                                                                                 | Increase explicit timeout or fix server    | Pair and timeout duration         |
+| Invalid stdout JSON             | JSON parse boundary                            | Stop session and kill child                                                                                                                                | Fix server framing                         | Response line context             |
+| Unexpected process exit         | Exit event before response                     | Fail capture                                                                                                                                               | Fix server lifecycle                       | Exit status                       |
+| Malformed cassette              | Header/entry validation                        | Reject without replay                                                                                                                                      | Regenerate or edit safely                  | Sequence/line                     |
+| Replay mismatch                 | Canonical comparison                           | Return non-zero without execution                                                                                                                          | Review diff/update baseline intentionally  | Pair and path                     |
+| Secret-like data                | Key/value policy                               | Replace before persistence                                                                                                                                 | Add project policy; use synthetic fixtures | Redaction count without raw value |
+| Large input/resource exhaustion | `MAX_CASSETTE_BYTES` / `MAX_LINE_BYTES` bounds | Fail before unbounded allocation; `cassetteFromJsonlStream` stops reading at the bound, and the stdio transport kills a child that emits an oversized line | Split cassette or raise explicit limit     | `CassetteSizeError` with limit    |
 
 ## Threat model
 
@@ -115,15 +115,15 @@ The primary assets are source-adjacent tool arguments and responses, credentials
 
 ### Attack surface and trust boundaries
 
-| Boundary              | Threat                                                  | Mitigation                                                                                      |
-| --------------------- | ------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| User CLI → filesystem | Path traversal, accidental overwrite, symlink surprises | Resolve paths, validate input/output distinction, document permissions, add tests.              |
-| CLI → child process   | Command injection or unbounded process behavior         | Pass executable and argv separately to `spawn`; no shell; timeout and cleanup.                  |
-| Child stdout → parser | Malformed JSON, huge lines, instruction-like content    | Treat as untrusted data; parse only; bound reads where feasible; never execute payload text.    |
-| Payload → cassette    | Credential or private-data leakage                      | Default key/value redaction, explicit warnings, synthetic fixtures, negative tests.             |
-| Cassette → replay     | Cassette interpreted as instructions                    | Replay only compares data and returns recorded JSON; no process/network execution.              |
-| Diff output → CI logs | Secret echo or terminal control sequences               | Redact before comparison/reporting and serialize JSON safely.                                   |
-| Dependencies → build  | Supply-chain compromise                                 | Lockfile, minimal dependencies, audit in CI, dependency review, no runtime network requirement. |
+| Boundary              | Threat                                                  | Mitigation                                                                                                                |
+| --------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| User CLI → filesystem | Path traversal, accidental overwrite, symlink surprises | Resolve paths, validate input/output distinction, document permissions, add tests.                                        |
+| CLI → child process   | Command injection or unbounded process behavior         | Pass executable and argv separately to `spawn`; no shell; timeout and cleanup.                                            |
+| Child stdout → parser | Malformed JSON, huge lines, instruction-like content    | Treat as untrusted data; parse only; kill the child on oversized lines (`MAX_LINE_BYTES`) and never execute payload text. |
+| Payload → cassette    | Credential or private-data leakage                      | Default key/value redaction, explicit warnings, synthetic fixtures, negative tests.                                       |
+| Cassette → replay     | Cassette interpreted as instructions                    | Replay only compares data and returns recorded JSON; no process/network execution.                                        |
+| Diff output → CI logs | Secret echo or terminal control sequences               | Redact before comparison/reporting and serialize JSON safely.                                                             |
+| Dependencies → build  | Supply-chain compromise                                 | Lockfile, minimal dependencies, audit in CI, dependency review, no runtime network requirement.                           |
 
 ## Verification gates
 

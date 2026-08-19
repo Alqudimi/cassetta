@@ -3,6 +3,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createInterface } from "node:readline";
 import {
   cassetteToJsonl,
+  MAX_LINE_BYTES,
   prepareEntry,
   type Cassette,
   type CassetteEntry,
@@ -61,11 +62,22 @@ const readResponse = (
     new Promise<ProtocolMessage>((resolve, reject) => {
       const cleanup = () => {
         reader.close();
+        child.stdout.removeListener("data", onData);
         child.stdout.removeListener("error", onError);
         child.removeListener("error", onError);
         child.removeListener("exit", onExit);
       };
       const onLine = (line: string) => {
+        if (Buffer.byteLength(line, "utf8") > MAX_LINE_BYTES) {
+          if (!child.killed) child.kill();
+          cleanup();
+          reject(
+            new StdioTransportError(
+              `The stdio server emitted a line exceeding the ${MAX_LINE_BYTES}-byte limit; session aborted to prevent resource exhaustion`
+            )
+          );
+          return;
+        }
         cleanup();
         try {
           resolve(JSON.parse(line) as ProtocolMessage);
@@ -76,6 +88,11 @@ const readResponse = (
             })
           );
         }
+      };
+      const onData = (chunk: Buffer) => {
+        // Reject oversized line fragments eagerly: a child that never emits
+        // newlines could otherwise accumulate an unbounded buffer.
+        if (chunk.length > MAX_LINE_BYTES && !child.killed) child.kill();
       };
       const onError = (error: Error) => {
         cleanup();
@@ -94,6 +111,7 @@ const readResponse = (
         );
       };
       reader.once("line", onLine);
+      child.stdout.on("data", onData);
       child.stdout.once("error", onError);
       child.once("error", onError);
       child.once("exit", onExit);

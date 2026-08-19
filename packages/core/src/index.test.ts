@@ -1,7 +1,11 @@
 // Signal Archive design: tests read like evidence checks; each assertion names the behavior a contributor must preserve.
+import { Readable } from "node:stream";
 import { describe, expect, it } from "vitest";
 import {
+  MAX_CASSETTE_BYTES,
+  MAX_LINE_BYTES,
   cassetteFromJsonl,
+  cassetteFromJsonlStream,
   cassetteToJsonl,
   diffEntries,
   normalizeMessage,
@@ -102,5 +106,69 @@ describe("Cassetta core", () => {
       entries: [{ ...entry({ method: "tools/list" }), latencyMs: -1 }],
     };
     expect(() => cassetteToJsonl(invalidLatency)).toThrow("Invalid latency");
+  });
+
+  it("rejects an oversized cassette before allocating the entry map", () => {
+    const header = JSON.stringify({
+      cassette: "bloated",
+      version: 1,
+      createdAt: "now",
+    });
+    const oversized =
+      `${header}\n` + "x".repeat(MAX_CASSETTE_BYTES - header.length + 1);
+    expect(() => cassetteFromJsonl(oversized)).toThrow(
+      `exceeds the ${MAX_CASSETTE_BYTES}-byte bound`
+    );
+  });
+
+  it("rejects an oversized entry line with a size error", () => {
+    const header = JSON.stringify({
+      cassette: "tall",
+      version: 1,
+      createdAt: "now",
+    });
+    const payload = {
+      sequence: 2,
+      direction: "request",
+      timestamp: "2026-08-16T00:00:00.000Z",
+      message: { method: "tools/list", payload: "x".repeat(MAX_LINE_BYTES) },
+    };
+    const oversized = `${header}\n${JSON.stringify(payload)}\n`;
+    expect(() => cassetteFromJsonl(oversized)).toThrow(
+      `exceeds the ${MAX_LINE_BYTES}-byte limit`
+    );
+  });
+
+  it("rejects an oversized stream as soon as the byte bound is crossed", () => {
+    const header = JSON.stringify({
+      cassette: "stream",
+      version: 1,
+      createdAt: "now",
+    });
+    const body = "x".repeat(MAX_CASSETTE_BYTES - header.length + 1);
+    const stream = Readable.from([`${header}\n`, body]);
+    expect(cassetteFromJsonlStream(stream)).rejects.toThrow(
+      `exceeds the ${MAX_CASSETTE_BYTES}-byte bound`
+    );
+  });
+
+  it("parses a valid stream within the bounds", async () => {
+    const cassette = {
+      version: 1 as const,
+      name: "bounded",
+      createdAt: "2026-08-16T00:00:00.000Z",
+      entries: [
+        {
+          sequence: 1,
+          direction: "request",
+          timestamp: "2026-08-16T00:00:00.000Z",
+          message: { method: "tools/list" },
+        },
+      ],
+    };
+    const parsed = await cassetteFromJsonlStream(
+      Readable.from(cassetteToJsonl(cassette))
+    );
+    expect(parsed).toEqual(cassette);
   });
 });
