@@ -2,6 +2,10 @@
 
 All notable changes to Cassetta are documented here.
 
+## [0.5.1] — 2026-08-19
+
+This patch release carries the bounded HTTP JSON-RPC capture adapter and the merged Forge hardening baseline under a tag newer than the existing v0.5.0 release. It keeps endpoint validation, timeout and payload limits, typed transport errors, SARIF output, cassette validation, and the full CLI smoke gate in the published state.
+
 ## [0.5.0] — 2026-08-19
 
 This release adds a bounded HTTP JSON-RPC capture adapter with endpoint validation, caller-injected fetch support, a 10-second default timeout, a 1 MiB response limit, redaction-before-persistence, and typed failures for invalid endpoints, timeouts, non-2xx responses, invalid JSON, and oversized payloads. Transport coverage now includes stdio, HTTP, and offline replay paths.
