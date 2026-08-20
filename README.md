@@ -63,6 +63,15 @@ const result = replayCassette(cassette, [
 console.log(result.responses);
 ```
 
+Sign a cassette with an Ed25519 private key and verify it later with the public key. The manifest signs a canonical behavior payload, excluding volatile timestamps, so it detects content drift without storing the private key.
+
+```bash
+node packages/cli/dist/cassetta.mjs sign \
+  fixtures/local.jsonl private-key.pem manifest.json ci-key
+node packages/cli/dist/cassetta.mjs verify-signature \
+  fixtures/local.jsonl manifest.json public-key.pem
+```
+
 ## What is captured
 
 A cassette contains one header line and one entry per JSON-RPC message. Entries preserve request/response order, normalized messages, optional latency, and safe metadata. Object keys are canonicalized for comparison, while array ordering remains observable because it may be meaningful behavior.
@@ -77,13 +86,15 @@ Default redaction covers common secret-bearing keys and bearer-like values befor
 
 ## Commands
 
-| Command                                                          | Purpose                                                                                  |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `cassetta record <input> <output>`                               | Normalize and redact an existing cassette.                                               |
-| `cassetta capture-stdio <requests> <output> <command> [...args]` | Run a bounded local JSONL process and capture its responses.                             |
-| `cassetta replay <cassette> [requests.json]`                     | Inspect a cassette or validate supplied requests against it without starting a provider. |
-| `cassetta diff <expected> <actual> [--json\|--sarif]`            | Compare two cassettes and emit CI-friendly evidence.                                     |
-| `cassetta check <cassette> [--json\|--sarif]`                    | Validate version, sequence, entries, and pair shape.                                     |
+| Command                                                                       | Purpose                                                                                  |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | --- |
+| `cassetta record <input> <output>`                                            | Normalize and redact an existing cassette.                                               |
+| `cassetta capture-stdio <requests> <output> <command> [...args]`              | Run a bounded local JSONL process and capture its responses.                             |
+| `cassetta replay <cassette> [requests.json]`                                  | Inspect a cassette or validate supplied requests against it without starting a provider. |
+| `cassetta diff <expected> <actual> [--json\|--sarif]`                         | Compare two cassettes and emit CI-friendly evidence.                                     |
+| `cassetta check <cassette.jsonl> [--json\|--sarif]`                           | Validate version, sequence, entries, and pair shape.                                     |
+| `cassetta sign <cassette.jsonl> <private-key.pem> <manifest.json> [key-id]`   | Sign canonical cassette behavior with Ed25519.                                           |
+| `cassetta verify-signature <cassette.jsonl> <manifest.json> <public-key.pem>` | Verify the manifest and fail on tampering or wrong keys.                                 |     |
 
 ## Architecture
 
@@ -127,7 +138,7 @@ Cassetta is not a sandbox, secret manager, or guarantee against a malicious loca
 
 ## Non-goals
 
-Cassetta does not replace the [official MCP Inspector](https://modelcontextprotocol.io/docs/2026-07-28/tools/inspector), [MCPJam](https://github.com/MCPJam/inspector), Pact, hosted observability, LLM-as-judge evaluation, or a complete MCP conformance suite. Full Streamable HTTP session semantics, OAuth workflows, signed manifests, schema-aware assertions, and semantic evaluation remain intentionally outside the current local-first scope.
+Cassetta does not replace the [official MCP Inspector](https://modelcontextprotocol.io/docs/2026-07-28/tools/inspector), [MCPJam](https://github.com/MCPJam/inspector), Pact, hosted observability, LLM-as-judge evaluation, or a complete MCP conformance suite. Full Streamable HTTP session semantics, OAuth workflows, schema-aware assertions, and semantic evaluation remain intentionally outside the current local-first scope. Signed manifests are supported for cassette behavior integrity, but key distribution and enterprise key management remain the caller's responsibility.
 
 ## Contributing
 

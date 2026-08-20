@@ -10,6 +10,11 @@ import {
   type DiffLine,
   type ProtocolMessage,
 } from "../../core/src/index.js";
+import {
+  signCassette,
+  verifyCassette,
+  type CassetteManifest,
+} from "../../core/src/signing.js";
 import { captureStdioSession } from "../../transport/src/stdio.js";
 import { replayCassette } from "../../transport/src/replay.js";
 
@@ -28,10 +33,20 @@ Usage:
   cassetta replay <cassette.jsonl> [requests.json] [--json]
   cassetta diff <expected.jsonl> <actual.jsonl> [--json|--sarif]
   cassetta check <cassette.jsonl> [--json|--sarif]
+  cassetta sign <cassette.jsonl> <private-key.pem> <manifest.json> [key-id]
+  cassetta verify-signature <cassette.jsonl> <manifest.json> <public-key.pem>
 `;
 
 const readCassette = async (file: string): Promise<Cassette> =>
   cassetteFromJsonl(await readFile(resolve(file), "utf8"));
+
+const readJson = async <T>(file: string): Promise<T> => {
+  try {
+    return JSON.parse(await readFile(resolve(file), "utf8")) as T;
+  } catch {
+    throw new CliUsageError(`could not parse JSON: ${file}`);
+  }
+};
 
 const readRequests = async (file: string): Promise<ProtocolMessage[]> => {
   let value: unknown;
@@ -155,6 +170,44 @@ const main = async (): Promise<void> => {
         2
       )
     );
+    return;
+  }
+
+  if (command === "sign") {
+    const [cassetteFile, privateKeyFile, manifestFile, keyId = "default"] =
+      positional;
+    if (!cassetteFile || !privateKeyFile || !manifestFile)
+      throw new CliUsageError(
+        "sign requires cassette, private key, and manifest paths"
+      );
+    const manifest = signCassette(
+      await readCassette(cassetteFile),
+      await readFile(resolve(privateKeyFile)),
+      keyId
+    );
+    await writeFile(
+      resolve(manifestFile),
+      `${JSON.stringify(manifest, null, 2)}\n`,
+      "utf8"
+    );
+    console.log(`signed ${cassetteFile} → ${manifestFile}`);
+    return;
+  }
+
+  if (command === "verify-signature") {
+    const [cassetteFile, manifestFile, publicKeyFile] = positional;
+    if (!cassetteFile || !manifestFile || !publicKeyFile)
+      throw new CliUsageError(
+        "verify-signature requires cassette, manifest, and public key paths"
+      );
+    const manifest = await readJson<CassetteManifest>(manifestFile);
+    const valid = verifyCassette(
+      await readCassette(cassetteFile),
+      manifest,
+      await readFile(resolve(publicKeyFile))
+    );
+    console.log(JSON.stringify({ cassette: cassetteFile, valid }, null, 2));
+    if (!valid) process.exitCode = 1;
     return;
   }
 

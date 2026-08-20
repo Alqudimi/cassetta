@@ -2,6 +2,10 @@
 
 All notable changes to Cassetta are documented here.
 
+## [0.6.0] — 2026-08-20
+
+This release adds deterministic Ed25519 cassette manifests. The core signs a canonical behavior payload that excludes volatile timestamps, stores only digest, algorithm, key ID, and signature, and verifies tampering or wrong keys without introducing a runtime dependency. The CLI exposes `sign` and `verify-signature`, and the repository smoke path exercises key generation, signing, and verification in CI.
+
 ## [0.5.1] — 2026-08-19
 
 This patch release carries the bounded HTTP JSON-RPC capture adapter and the merged Forge hardening baseline under a tag newer than the existing v0.5.0 release. It keeps endpoint validation, timeout and payload limits, typed transport errors, SARIF output, cassette validation, and the full CLI smoke gate in the published state.
