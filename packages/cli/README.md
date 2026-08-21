@@ -20,3 +20,7 @@ The CLI never persists a request before it has passed through the core normaliza
 ## Signing
 
 Use `cassetta sign <cassette> <private-key.pem> <manifest.json> [key-id]` to create an Ed25519 manifest, then use `cassetta verify-signature <cassette> <manifest.json> <public-key.pem>` as a release or CI gate. Keep private keys outside the repository and inject them only in the controlled signing environment; verification jobs need only the public key and manifest.
+
+## Contract assertions
+
+Use `cassetta assert <cassette.jsonl> <contract.json> [--json|--sarif]` to enforce a small versioned contract over cassette entries. The command reports stable paths such as `entries[1].message.result` and exits with code 1 when the recorded behavior drifts. It is intended for pull-request and release gates, not as a replacement for a full JSON Schema validator.

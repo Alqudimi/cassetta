@@ -2,6 +2,10 @@
 
 All notable changes to Cassetta are documented here.
 
+## [0.7.0] — 2026-08-21
+
+This release adds a deliberately small schema-aware contract assertion engine. Contracts can pin cassette entry direction, method, required properties, enums, array bounds, and nested object shapes; the CLI exposes `assert` with JSON and SARIF output and exits non-zero on drift. Core tests cover matching contracts, actionable failures, unsupported versions, and the CLI smoke path runs a passing contract in CI.
+
 ## [0.6.0] — 2026-08-20
 
 This release adds deterministic Ed25519 cassette manifests. The core signs a canonical behavior payload that excludes volatile timestamps, stores only digest, algorithm, key ID, and signature, and verifies tampering or wrong keys without introducing a runtime dependency. The CLI exposes `sign` and `verify-signature`, and the repository smoke path exercises key generation, signing, and verification in CI.

@@ -1,6 +1,6 @@
 {
   "name": "cassetta",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -12,7 +12,7 @@
     "check": "tsc --noEmit",
     "test:core": "vitest run --root packages/core src/index.test.ts src/signing.test.ts --coverage",
     "test:transport": "vitest run --root packages/transport",
-    "test:cli": "pnpm build:cli && rm -rf /tmp/cassetta-smoke && mkdir -p /tmp/cassetta-smoke && node packages/cli/dist/cassetta.mjs capture-stdio examples/requests.json /tmp/cassetta-smoke/baseline.jsonl node examples/fixture-server.mjs && node packages/cli/dist/cassetta.mjs check /tmp/cassetta-smoke/baseline.jsonl --json && node packages/cli/dist/cassetta.mjs replay /tmp/cassetta-smoke/baseline.jsonl examples/requests.json --json && cp /tmp/cassetta-smoke/baseline.jsonl /tmp/cassetta-smoke/actual.jsonl && node packages/cli/dist/cassetta.mjs diff /tmp/cassetta-smoke/baseline.jsonl /tmp/cassetta-smoke/actual.jsonl --json && node examples/generate-keypair.mjs /tmp/cassetta-smoke/keys && node packages/cli/dist/cassetta.mjs sign /tmp/cassetta-smoke/baseline.jsonl /tmp/cassetta-smoke/keys/private-key.pem /tmp/cassetta-smoke/manifest.json ci-key && node packages/cli/dist/cassetta.mjs verify-signature /tmp/cassetta-smoke/baseline.jsonl /tmp/cassetta-smoke/manifest.json /tmp/cassetta-smoke/keys/public-key.pem",
+    "test:cli": "pnpm build:cli && rm -rf /tmp/cassetta-smoke && mkdir -p /tmp/cassetta-smoke && node packages/cli/dist/cassetta.mjs capture-stdio examples/requests.json /tmp/cassetta-smoke/baseline.jsonl node examples/fixture-server.mjs && node packages/cli/dist/cassetta.mjs check /tmp/cassetta-smoke/baseline.jsonl --json && node packages/cli/dist/cassetta.mjs replay /tmp/cassetta-smoke/baseline.jsonl examples/requests.json --json && cp /tmp/cassetta-smoke/baseline.jsonl /tmp/cassetta-smoke/actual.jsonl && node packages/cli/dist/cassetta.mjs diff /tmp/cassetta-smoke/baseline.jsonl /tmp/cassetta-smoke/actual.jsonl --json && node examples/generate-keypair.mjs /tmp/cassetta-smoke/keys && node packages/cli/dist/cassetta.mjs sign /tmp/cassetta-smoke/baseline.jsonl /tmp/cassetta-smoke/keys/private-key.pem /tmp/cassetta-smoke/manifest.json ci-key && node packages/cli/dist/cassetta.mjs verify-signature /tmp/cassetta-smoke/baseline.jsonl /tmp/cassetta-smoke/manifest.json /tmp/cassetta-smoke/keys/public-key.pem && node packages/cli/dist/cassetta.mjs assert /tmp/cassetta-smoke/baseline.jsonl examples/contract.json --json",
     "format": "prettier --write .",
     "format:check": "prettier --check packages/**/*.ts examples/**/*.mjs README.md CONTRIBUTING.md SECURITY.md CHANGELOG.md .github/**/*.yml package.json packages/transport/README.md docs/**/*.md docs/adrs/*.md tasks/*.md"
   },

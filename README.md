@@ -70,7 +70,11 @@ node packages/cli/dist/cassetta.mjs sign \
   fixtures/local.jsonl private-key.pem manifest.json ci-key
 node packages/cli/dist/cassetta.mjs verify-signature \
   fixtures/local.jsonl manifest.json public-key.pem
+node packages/cli/dist/cassetta.mjs assert \
+  fixtures/local.jsonl examples/contract.json --json
 ```
+
+A contract is a small versioned JSON document that declares the expected direction, method, and JSON shape for selected cassette entries. Assertion failures include stable entry paths and actionable messages, and return exit code 1 for CI gates.
 
 ## What is captured
 
@@ -94,7 +98,8 @@ Default redaction covers common secret-bearing keys and bearer-like values befor
 | `cassetta diff <expected> <actual> [--json\|--sarif]`                         | Compare two cassettes and emit CI-friendly evidence.                                     |
 | `cassetta check <cassette.jsonl> [--json\|--sarif]`                           | Validate version, sequence, entries, and pair shape.                                     |
 | `cassetta sign <cassette.jsonl> <private-key.pem> <manifest.json> [key-id]`   | Sign canonical cassette behavior with Ed25519.                                           |
-| `cassetta verify-signature <cassette.jsonl> <manifest.json> <public-key.pem>` | Verify the manifest and fail on tampering or wrong keys.                                 |     |
+| `cassetta verify-signature <cassette.jsonl> <manifest.json> <public-key.pem>` | Verify the manifest and fail on tampering or wrong keys.                                 |
+| `cassetta assert <cassette.jsonl> <contract.json> [--json\|--sarif]`          | Enforce method, direction, and JSON shape contracts.                                     |     |
 
 ## Architecture
 
@@ -138,7 +143,7 @@ Cassetta is not a sandbox, secret manager, or guarantee against a malicious loca
 
 ## Non-goals
 
-Cassetta does not replace the [official MCP Inspector](https://modelcontextprotocol.io/docs/2026-07-28/tools/inspector), [MCPJam](https://github.com/MCPJam/inspector), Pact, hosted observability, LLM-as-judge evaluation, or a complete MCP conformance suite. Full Streamable HTTP session semantics, OAuth workflows, schema-aware assertions, and semantic evaluation remain intentionally outside the current local-first scope. Signed manifests are supported for cassette behavior integrity, but key distribution and enterprise key management remain the caller's responsibility.
+Cassetta does not replace the [official MCP Inspector](https://modelcontextprotocol.io/docs/2026-07-28/tools/inspector), [MCPJam](https://github.com/MCPJam/inspector), Pact, hosted observability, LLM-as-judge evaluation, or a complete MCP conformance suite. Full Streamable HTTP session semantics, OAuth workflows, and semantic evaluation remain intentionally outside the current local-first scope. Schema-aware assertions are supported as a deliberately small JSON contract subset; full JSON Schema compatibility remains out of scope. Signed manifests are supported for cassette behavior integrity, but key distribution and enterprise key management remain the caller's responsibility.
 
 ## Contributing
 

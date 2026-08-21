@@ -27,5 +27,5 @@ jobs:
       - run: pnpm test:cli
       - run: pnpm build
       - run: pnpm --dir packages/cli pack --pack-destination /tmp/cassetta-pack
-      - run: test -f /tmp/cassetta-pack/cassetta-cli-0.6.0.tgz
+      - run: test -f /tmp/cassetta-pack/cassetta-cli-0.7.0.tgz
       - run: pnpm audit --audit-level high

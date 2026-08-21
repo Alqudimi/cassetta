@@ -11,6 +11,10 @@ import {
   type ProtocolMessage,
 } from "../../core/src/index.js";
 import {
+  validateCassetteContract,
+  type CassetteContract,
+} from "../../core/src/assertions.js";
+import {
   signCassette,
   verifyCassette,
   type CassetteManifest,
@@ -35,6 +39,7 @@ Usage:
   cassetta check <cassette.jsonl> [--json|--sarif]
   cassetta sign <cassette.jsonl> <private-key.pem> <manifest.json> [key-id]
   cassetta verify-signature <cassette.jsonl> <manifest.json> <public-key.pem>
+  cassetta assert <cassette.jsonl> <contract.json> [--json|--sarif]
 `;
 
 const readCassette = async (file: string): Promise<Cassette> =>
@@ -208,6 +213,31 @@ const main = async (): Promise<void> => {
     );
     console.log(JSON.stringify({ cassette: cassetteFile, valid }, null, 2));
     if (!valid) process.exitCode = 1;
+    return;
+  }
+
+  if (command === "assert") {
+    const [cassetteFile, contractFile] = positional;
+    if (!cassetteFile || !contractFile)
+      throw new CliUsageError("assert requires cassette and contract paths");
+    const issues = validateCassetteContract(
+      await readCassette(cassetteFile),
+      await readJson<CassetteContract>(contractFile)
+    );
+    const findings = issues.map(issue => ({
+      path: issue.path,
+      message: issue.message,
+    }));
+    console.log(
+      JSON.stringify(
+        parsed.sarif
+          ? sarif("cassetta-contract", findings)
+          : { cassette: cassetteFile, valid: issues.length === 0, issues },
+        null,
+        2
+      )
+    );
+    if (issues.length > 0) process.exitCode = 1;
     return;
   }
 
