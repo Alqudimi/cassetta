@@ -1,8 +1,9 @@
 // Signal Archive design: CLI output is operational, concise, and safe to pipe into CI logs.
+import { createReadStream } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
-  cassetteFromJsonl,
+  cassetteFromJsonlStream,
   cassetteToJsonl,
   diffEntries,
   prepareEntry,
@@ -43,7 +44,7 @@ Usage:
 `;
 
 const readCassette = async (file: string): Promise<Cassette> =>
-  cassetteFromJsonl(await readFile(resolve(file), "utf8"));
+  cassetteFromJsonlStream(createReadStream(resolve(file)));
 
 const readJson = async <T>(file: string): Promise<T> => {
   try {

@@ -15,6 +15,19 @@ export class CassetteFormatError extends Error {
   }
 }
 
+export class CassetteSizeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "CassetteSizeError";
+  }
+}
+
+/** Default upper bound for a single cassette line, in bytes. */
+export const MAX_LINE_BYTES = 64 * 1024;
+
+/** Default upper bound for a complete cassette file, in bytes. */
+export const MAX_CASSETTE_BYTES = 16 * 1024 * 1024;
+
 const isJsonValue = (value: unknown): value is JsonValue => {
   if (value === null) return true;
   if (typeof value === "string" || typeof value === "boolean") return true;

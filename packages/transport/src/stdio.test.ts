@@ -2,6 +2,7 @@
 import { chmod, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { MAX_LINE_BYTES } from "../../core/src/index";
 import { describe, expect, it } from "vitest";
 import { captureStdioSession } from "./stdio";
 
@@ -96,5 +97,28 @@ describe("stdio transport", () => {
         timeoutMs: 100,
       })
     ).rejects.toThrow("stream failed");
+  });
+
+  it("aborts the session when the server emits an oversized line", async () => {
+    const oversizedFixture = join(
+      tmpdir(),
+      `cassetta-oversized-${process.pid}.mjs`
+    );
+    await writeFile(
+      oversizedFixture,
+      `process.stdin.once("data", () => {
+  process.stdout.write(JSON.stringify({ result: "x".repeat(${MAX_LINE_BYTES + 1}) }) + "\\n");
+  setTimeout(() => {}, 100);
+});`
+    );
+    await chmod(oversizedFixture, 0o600);
+
+    await expect(
+      captureStdioSession([{ id: 1, method: "tools/list" }], {
+        command: process.execPath,
+        args: [oversizedFixture],
+        timeoutMs: 2_000,
+      })
+    ).rejects.toThrow(`${MAX_LINE_BYTES}-byte limit`);
   });
 });

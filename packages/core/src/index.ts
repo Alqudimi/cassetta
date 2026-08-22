@@ -1,11 +1,20 @@
 // Signal Archive design: the core stays framework-free and evidence-oriented. Domain code uses explicit types, deterministic transforms, and no network access.
+import { Readable } from "node:stream";
 import {
   CassetteFormatError,
+  CassetteSizeError,
+  MAX_CASSETTE_BYTES,
+  MAX_LINE_BYTES,
   validateCassette,
   validateCassetteEntry,
 } from "./validation.js";
 
-export { CassetteFormatError } from "./validation.js";
+export {
+  CassetteFormatError,
+  CassetteSizeError,
+  MAX_CASSETTE_BYTES,
+  MAX_LINE_BYTES,
+} from "./validation.js";
 
 export type JsonValue =
   | null
@@ -199,6 +208,18 @@ export const cassetteFromJsonl = (input: string): Cassette => {
     throw new CassetteFormatError("Cassette is empty");
 
   const lines = input.split(/\r?\n/).filter(line => line.trim() !== "");
+  const maxLineBytes = input.length;
+  if (maxLineBytes > MAX_CASSETTE_BYTES)
+    throw new CassetteSizeError(
+      `Cassette content of ${maxLineBytes} bytes exceeds the ${MAX_CASSETTE_BYTES}-byte bound; split it into smaller cassettes`
+    );
+  return parseCassetteLines(lines, maxLineBytes);
+};
+
+const parseCassetteLines = (
+  lines: string[],
+  maxLineBytes: number
+): Cassette => {
   let header: { cassette?: unknown; version?: unknown; createdAt?: unknown };
   try {
     header = JSON.parse(lines[0]) as typeof header;
@@ -211,6 +232,11 @@ export const cassetteFromJsonl = (input: string): Cassette => {
     throw new CassetteFormatError("Unsupported cassette header", { line: 1 });
 
   const entries = lines.slice(1).map((line, index) => {
+    const byteLength = Buffer.byteLength(line, "utf8");
+    if (byteLength > MAX_LINE_BYTES)
+      throw new CassetteSizeError(
+        `Line ${index + 2} of ${byteLength} bytes exceeds the ${MAX_LINE_BYTES}-byte limit; split it into smaller entries`
+      );
     let parsed: unknown;
     try {
       parsed = JSON.parse(line) as unknown;
@@ -229,4 +255,34 @@ export const cassetteFromJsonl = (input: string): Cassette => {
       typeof header.createdAt === "string" ? header.createdAt : "<unknown>",
     entries,
   });
+};
+
+/**
+ * Parse a cassette from a bounded byte stream.
+ *
+ * Rejects before unbounded allocation: reading stops as soon as the
+ * accumulated byte count exceeds MAX_CASSETTE_BYTES, or a single line
+ * exceeds MAX_LINE_BYTES, so an oversized or malformed input can never
+ * exhaust memory.
+ */
+export const cassetteFromJsonlStream = async (
+  source: Readable,
+  options: { maxBytes?: number } = {}
+): Promise<Cassette> => {
+  const maxBytes = options.maxBytes ?? MAX_CASSETTE_BYTES;
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of source) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+    total += buffer.length;
+    if (total > maxBytes)
+      throw new CassetteSizeError(
+        `Cassette content exceeds the ${maxBytes}-byte bound; split it into smaller cassettes`
+      );
+    chunks.push(buffer);
+  }
+  const input = Buffer.concat(chunks).toString("utf8");
+  if (input.trim() === "") throw new CassetteFormatError("Cassette is empty");
+  const lines = input.split(/\r?\n/).filter(line => line.trim() !== "");
+  return parseCassetteLines(lines, total);
 };
