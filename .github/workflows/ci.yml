@@ -22,10 +22,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm format:check
-      - run: pnpm vitest run --root packages/core src/index.test.ts --coverage
+      - run: pnpm test:core
       - run: pnpm test:transport
+      - run: pnpm bench:core
       - run: pnpm test:cli
       - run: pnpm build
       - run: pnpm --dir packages/cli pack --pack-destination /tmp/cassetta-pack
-      - run: test -f /tmp/cassetta-pack/cassetta-cli-0.7.0.tgz
+      - run: test -f /tmp/cassetta-pack/cassetta-cli-0.8.0.tgz
       - run: pnpm audit --audit-level high

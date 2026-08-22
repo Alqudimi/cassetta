@@ -137,6 +137,10 @@ pnpm audit --audit-level high
 
 The critical path is intentionally small. The core package has no network or provider dependency. Capture launches only the executable and arguments explicitly supplied by the user, with `shell: false`, bounded response timeouts, and cleanup on failure. Offline replay treats cassette content as data and never executes it.
 
+## Performance
+
+Cassetta includes a reproducible core benchmark at `examples/benchmark-core.ts`. It measures normalization and same-baseline diff work over synthetic fixtures containing 200, 2,000, and 10,000 entries, and reports elapsed milliseconds plus entries per second. Run it with `pnpm bench:core`. The benchmark is observational: CI records the result but does not impose a machine-dependent latency threshold.
+
 ## Security boundary
 
 Cassetta is not a sandbox, secret manager, or guarantee against a malicious local executable. Do not capture production credentials or private customer payloads unless your organization has approved the handling path. Report vulnerabilities privately through [`SECURITY.md`](SECURITY.md).

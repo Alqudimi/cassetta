@@ -1,6 +1,6 @@
 {
   "name": "@cassetta/cli",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Capture, replay, diff, and check deterministic MCP workflow cassettes.",
   "license": "MIT",
   "type": "module",

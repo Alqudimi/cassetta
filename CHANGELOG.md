@@ -2,6 +2,10 @@
 
 All notable changes to Cassetta are documented here.
 
+## [0.8.0] — 2026-08-22
+
+This release adds a deterministic core benchmark covering normalization and same-baseline diff work across 200, 2,000, and 10,000 entries. The benchmark reports measured elapsed time and throughput locally and in CI without imposing machine-dependent thresholds. It also promotes the full core test suite and benchmark into the quality gate.
+
 ## [0.7.0] — 2026-08-21
 
 This release adds a deliberately small schema-aware contract assertion engine. Contracts can pin cassette entry direction, method, required properties, enums, array bounds, and nested object shapes; the CLI exposes `assert` with JSON and SARIF output and exits non-zero on drift. Core tests cover matching contracts, actionable failures, unsupported versions, and the CLI smoke path runs a passing contract in CI.
